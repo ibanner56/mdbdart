@@ -67,8 +67,13 @@ void main() {
     });
 
     test('negative rowOffset or rowLimit throws ArgumentError', () {
-      expect(() => table.getData(rowOffset: -1), throwsArgumentError);
-      expect(() => table.getData(rowLimit: -1), throwsArgumentError);
+      Matcher argumentError(String name) => throwsA(
+        isA<ArgumentError>()
+            .having((e) => e, 'type', isNot(isA<RangeError>()))
+            .having((e) => e.name, 'name', name),
+      );
+      expect(() => table.getData(rowOffset: -1), argumentError('rowOffset'));
+      expect(() => table.getData(rowLimit: -1), argumentError('rowLimit'));
     });
 
     test('rowLimit 0 returns no rows', () {
