@@ -127,6 +127,10 @@ mdbdart is a port of [mdb-reader](https://github.com/andipaetzold/mdb-reader)
 databases are copied from mdb-reader. See
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the licence texts.
 
-## Licence
+## License
 
-mdbdart is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+mdbdart is licensed under the [GNU Affero General Public License v3.0 only](LICENSE)
+(AGPL-3.0-only), with the additional permission in
+[LICENSE-EXCEPTION.md](LICENSE-EXCEPTION.md) for distribution through app
+stores. The parts derived from mdb-reader keep mdb-reader's MIT notice, which
+is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

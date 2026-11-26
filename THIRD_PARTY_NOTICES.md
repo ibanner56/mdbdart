@@ -1,7 +1,8 @@
 # Third-party notices
 
-mdbdart is licensed under the GNU Affero General Public License v3.0 (see
-`LICENSE`). It includes code and data from the projects below, which are used
+mdbdart is licensed under the GNU Affero General Public License v3.0 only (see
+`LICENSE`), with the additional permission in `LICENSE-EXCEPTION.md`. It
+includes code and data from the projects below, which are used
 under their own licences.
 
 ## mdb-reader
