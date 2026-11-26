@@ -205,6 +205,22 @@ class Table {
     int rowOffset = 0,
     int? rowLimit,
   }) {
+    // Not upstream: upstream treats negative values like JavaScript's
+    // Array.slice, which counts from the end of each page.
+    if (rowOffset < 0) {
+      throw ArgumentError.value(rowOffset, 'rowOffset', 'must not be negative');
+    }
+    if (rowLimit != null && rowLimit < 0) {
+      throw ArgumentError.value(rowLimit, 'rowLimit', 'must not be negative');
+    }
+    return _database.withinRead(() => _getData(columns, rowOffset, rowLimit));
+  }
+
+  List<Map<String, Object?>> _getData(
+    List<String>? columns,
+    int rowOffset,
+    int? rowLimit,
+  ) {
     final columnDefinitions = _getColumnDefinitions();
 
     final data = <Map<String, Object?>>[];
@@ -233,9 +249,9 @@ class Table {
         continue;
       }
 
-      final start = rowsToSkip < 0 ? 0 : rowsToSkip;
+      final start = rowsToSkip;
       var end = recordOffsets.length;
-      if (rowsToRead != null && start + rowsToRead < end) {
+      if (rowsToRead != null && rowsToRead < end - start) {
         end = start + rowsToRead;
       }
       final recordsOnPage = _getDataFromPage(
@@ -340,7 +356,8 @@ class Table {
 
             // See mdbtools src/libmdb/write.c, mdb_crack_row3.
             final recordLength = recordEnd - recordStart + 1;
-            var jumpCount = (recordLength - 1) ~/ 256;
+            // Math.floor upstream; differs from ~/ for negative lengths.
+            var jumpCount = ((recordLength - 1) / 256).floor();
             final columnPointer = recordEnd - bitmaskSize - jumpCount - 1;
 
             // If last jump is a dummy value, ignore it

@@ -16,6 +16,11 @@ const _typeOtherPages = 0x00;
 /// supply rows directly (upstream's tests stub the database object).
 abstract interface class LongValueSource {
   Uint8List findPageRow(int pageRow);
+
+  /// Records that a long value of [bytes] bytes is about to be materialised.
+  /// Throws [MdbFormatException] if the current read exceeds its budget.
+  /// Not upstream; see [Database.chargeLongValue].
+  void chargeLongValue(int bytes);
 }
 
 /// See mdbtools src/libmdb/data.c, mdb_memo_to_string.
@@ -30,12 +35,14 @@ String readMemo(
   switch (type) {
     case _typeThisPage:
       final compressedText = slice(buffer, 12, 12 + memoLength);
+      database.chargeLongValue(compressedText.length);
       return uncompressText(compressedText, textEncoding);
 
     case _typeOtherPage:
       final pageRow = readUint32LE(buffer, 4);
       final rowBuffer = database.findPageRow(pageRow);
       final compressedText = slice(rowBuffer, 0, memoLength);
+      database.chargeLongValue(compressedText.length);
       return uncompressText(compressedText, textEncoding);
 
     case _typeOtherPages:
@@ -59,6 +66,7 @@ String readMemo(
           break;
         }
 
+        database.chargeLongValue(rowBuffer.length - 4);
         parts.add(slice(rowBuffer, 4));
         memoDataLength += rowBuffer.length - 4;
 

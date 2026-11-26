@@ -286,6 +286,110 @@ void main() {
     });
   });
 
+  group('long-value budget', () {
+    // Eight OLE headers on page 101 of V2007/ole.accdb rewritten to declare
+    // 2^24 - 1 bytes and point at another row's chain. Without the budget,
+    // reading the table returns about 140 MB from an 8.6 MB file.
+    const amplifyingPatch = [
+      (417446, 0xff),
+      (417447, 0xff),
+      (417448, 0xff),
+      (417449, 0x00),
+      (417450, 0x00),
+      (417451, 0x88),
+      (417488, 0xff),
+      (417489, 0xff),
+      (417490, 0xff),
+      (417491, 0x00),
+      (417492, 0x00),
+      (417493, 0x88),
+      (417534, 0xff),
+      (417535, 0xff),
+      (417536, 0xff),
+      (417537, 0x00),
+      (417538, 0x00),
+      (417539, 0x88),
+      (417585, 0xff),
+      (417586, 0xff),
+      (417587, 0xff),
+      (417588, 0x00),
+      (417589, 0x00),
+      (417590, 0x88),
+      (417632, 0xff),
+      (417633, 0xff),
+      (417634, 0xff),
+      (417637, 0x88),
+      (417638, 0x00),
+      (417640, 0x00),
+      (417641, 0x00),
+      (417642, 0x00),
+      (417643, 0x00),
+      (417678, 0xff),
+      (417679, 0xff),
+      (417680, 0xff),
+      (417683, 0x88),
+      (417686, 0x00),
+      (417687, 0x00),
+      (417688, 0x00),
+      (417689, 0x00),
+      (417725, 0xff),
+      (417726, 0xff),
+      (417727, 0xff),
+      (417733, 0x00),
+      (417734, 0x00),
+      (417735, 0x00),
+      (417736, 0x00),
+      (417771, 0xff),
+      (417772, 0xff),
+      (417773, 0xff),
+      (417774, 0x00),
+      (417776, 0x88),
+    ];
+
+    test('shared and over-long OLE values throw instead of allocating', () {
+      final bytes = readFixture('V2007/ole.accdb');
+      for (final (offset, value) in amplifyingPatch) {
+        bytes[offset] = value;
+      }
+      expect(
+        () => MdbReader(bytes).getTable('Table1').getData(),
+        throwsMdb<MdbFormatException>('exceed the size of the file'),
+      );
+    });
+
+    test('the budget resets for each top-level read', () {
+      final table = MdbReader(
+        readFixture('V2007/ole.accdb'),
+      ).getTable('Table1');
+      // Each read returns 7.2 MB of OLE data from an 8.6 MB file.
+      for (var i = 0; i < 3; i++) {
+        expect(table.getData(), hasLength(11));
+      }
+    });
+
+    test('decompressed attachment output is budgeted per read', () {
+      final database = Database(readFixture('V2016/attachments.accdb'));
+      expect(
+        () => database.withinRead(() {
+          for (var i = 0; i < 3; i++) {
+            database.chargeInflate(100 * 1024 * 1024);
+          }
+        }),
+        throwsMdb<MdbFormatException>('exceed the size limit'),
+      );
+    });
+
+    test('an attachment larger than the limit throws', () {
+      final wrapper = Uint8List(16);
+      writeUint32LE(wrapper, 0, 1); // compressed
+      writeUint32LE(wrapper, 4, maxAttachmentSize + 1);
+      expect(
+        () => decodeAttachmentFileData(wrapper),
+        throwsMdb<MdbUnsupportedException>('exceeds the limit'),
+      );
+    });
+  });
+
   group('complex columns', () {
     test('a nested complex read throws instead of recursing', () {
       final database = Database(readFixture('V2016/attachments.accdb'));

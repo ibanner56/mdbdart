@@ -45,6 +45,9 @@ class _Rows implements LongValueSource {
     }
     return buffer;
   }
+
+  @override
+  void chargeLongValue(int bytes) {}
 }
 
 void main() {

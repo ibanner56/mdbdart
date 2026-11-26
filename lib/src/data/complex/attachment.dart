@@ -15,7 +15,13 @@ const maxAttachmentSize = 256 * 1024 * 1024;
 
 /// Decodes attachment FileData as stored in Access (OLE wrapper with optional
 /// deflate).
-Uint8List decodeAttachmentFileData(Uint8List buffer) {
+///
+/// [chargeInflate] is called with the number of bytes inflation may produce,
+/// before inflating. Not upstream; see [Database.chargeInflate].
+Uint8List decodeAttachmentFileData(
+  Uint8List buffer, {
+  void Function(int bytes)? chargeInflate,
+}) {
   // 0-3: type flag; 0=raw, 1=compressed
   // 4-7: length
   // 8-end: content
@@ -28,12 +34,19 @@ Uint8List decodeAttachmentFileData(Uint8List buffer) {
 
   switch (typeFlag) {
     case _compressedType:
-      // Upstream inflates everything and then keeps at most dataLen bytes,
-      // so stopping at dataLen gives the same result.
-      content = zlibInflate(
-        content,
-        maxOutput: dataLen < maxAttachmentSize ? dataLen : maxAttachmentSize,
-      );
+      // Upstream inflates everything and then keeps at most dataLen bytes.
+      // Stopping at dataLen returns the same bytes for a valid stream, but
+      // when a stream holds more than dataLen bytes its tail and checksum are
+      // not checked (upstream would reject a corrupt tail).
+      if (dataLen > maxAttachmentSize) {
+        throw MdbUnsupportedException(
+          'Attachment of $dataLen bytes exceeds the limit of '
+          '$maxAttachmentSize bytes',
+        );
+      }
+      final maxOutput = dataLen < 0 ? 0 : dataLen;
+      chargeInflate?.call(maxOutput);
+      content = zlibInflate(content, maxOutput: maxOutput);
     case _rawType:
       // do nothing
       break;

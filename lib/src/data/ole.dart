@@ -28,18 +28,24 @@ Uint8List readOLE(Uint8List buffer, LongValueSource database) {
       // 12: data
 
       // inline
-      return Uint8List.fromList(slice(buffer, 12, 12 + length));
+      final inline = slice(buffer, 12, 12 + length);
+      database.chargeLongValue(inline.length);
+      return Uint8List.fromList(inline);
     case _typeOtherPage:
       // single page
       final pageRow = readUint32LE(buffer, 4);
       final rowBuffer = database.findPageRow(pageRow);
-      return Uint8List.fromList(slice(rowBuffer, 0, length));
+      final value = slice(rowBuffer, 0, length);
+      database.chargeLongValue(value.length);
+      return Uint8List.fromList(value);
     case _typeOtherPages:
       // multi page
       var pageRow = readUint32LE(buffer, 4);
       final visited = <int>{};
 
-      // `length` is at most 2^24 - 1, so this allocation is bounded.
+      // `length` is at most 2^24 - 1, but many rows can point at the same
+      // chain, so charge the whole value before allocating it.
+      database.chargeLongValue(length);
       final result = Uint8List(length);
 
       var offset = 0;

@@ -47,6 +47,74 @@ class Database implements LongValueSource {
   /// hostile file whose attachment table refers back to itself.
   int complexReadDepth = 0;
 
+  /// Nesting depth of [Table.getData] calls. Not upstream: the budgets below
+  /// are per top-level call, shared by the nested reads that complex columns
+  /// make.
+  int _readDepth = 0;
+  int _longValueBudget = 0;
+  int _inflateBudget = 0;
+
+  /// Rows of tables read while resolving complex columns, cached for the
+  /// duration of one top-level read. Not upstream: upstream re-reads them for
+  /// every cell.
+  final Map<Object, Object> readCache = {};
+
+  /// Slack on top of the file size for long values. Upstream zero-pads a
+  /// long value whose chain ends a few bytes early.
+  static const longValueSlack = 1024 * 1024;
+
+  /// Runs [read] as one read, so that budgets and caches are shared by the
+  /// reads nested inside it.
+  T withinRead<T>(T Function() read) {
+    if (_readDepth == 0) {
+      _longValueBudget = _buffer.length + longValueSlack;
+      _inflateBudget = _buffer.length * 16 > 256 * 1024 * 1024
+          ? _buffer.length * 16
+          : 256 * 1024 * 1024;
+    }
+    _readDepth++;
+    try {
+      return read();
+    } finally {
+      _readDepth--;
+      if (_readDepth == 0) {
+        readCache.clear();
+      }
+    }
+  }
+
+  /// Not upstream. Each long value (memo, OLE) is stored once in the file,
+  /// so in a valid database the long values one read returns add up to at
+  /// most the file size. A hostile file can point many rows at one chain or
+  /// declare lengths its chain does not hold; this stops that from
+  /// allocating more than the file size (plus [longValueSlack]) per read.
+  @override
+  void chargeLongValue(int bytes) {
+    if (_readDepth == 0) {
+      return;
+    }
+    _longValueBudget -= bytes;
+    if (_longValueBudget < 0) {
+      throw MdbFormatException(
+        'Long values in this read exceed the size of the file',
+      );
+    }
+  }
+
+  /// Not upstream. Bounds the decompressed attachment data one read
+  /// produces: at most 16 times the file size, and at least 256 MiB.
+  void chargeInflate(int bytes) {
+    if (_readDepth == 0) {
+      return;
+    }
+    _inflateBudget -= bytes;
+    if (_inflateBudget < 0) {
+      throw MdbFormatException(
+        'Decompressed attachments in this read exceed the size limit',
+      );
+    }
+  }
+
   /// Number of pages in the file, counting a partial last page.
   int get pageCount =>
       (_buffer.length + format.pageSize - 1) ~/ format.pageSize;

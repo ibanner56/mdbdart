@@ -53,6 +53,29 @@ void main() {
     });
   });
 
+  group('getData arguments', () {
+    late Table table;
+    setUpAll(() {
+      table = MdbReader(
+        readFixture('real/ASampleDatabase.accdb'),
+      ).getTable('Asset Items');
+    });
+
+    test('a very large rowLimit means no limit', () {
+      final maxInt = int.parse('9223372036854775807');
+      expect(table.getData(rowOffset: 30, rowLimit: maxInt), hasLength(35));
+    });
+
+    test('negative rowOffset or rowLimit throws ArgumentError', () {
+      expect(() => table.getData(rowOffset: -1), throwsArgumentError);
+      expect(() => table.getData(rowLimit: -1), throwsArgumentError);
+    });
+
+    test('rowLimit 0 returns no rows', () {
+      expect(table.getData(rowLimit: 0), isEmpty);
+    });
+  });
+
   group('table names', () {
     test('systemTables lists MSys tables only when asked', () {
       final reader = MdbReader(readFixture('V2010/test.accdb'));

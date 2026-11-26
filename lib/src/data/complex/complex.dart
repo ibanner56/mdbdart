@@ -51,23 +51,17 @@ List<Attachment> readComplex(
       throw MdbFormatException('Foreign key value is not valid');
     }
 
-    final (tableName: flatTableName, firstPage: flatTableFirstPage) =
-        resolveFlatTableForComplexColumn(database, column, complex);
-    final flatTable = Table(flatTableName, database, flatTableFirstPage);
-    String? foreignKeyColumnName;
-    for (final c in flatTable.getColumns()) {
-      if (c.type == ColumnType.long &&
-          !c.autoLong &&
-          !_attachmentTypeColumnNames.contains(c.name)) {
-        foreignKeyColumnName = c.name;
-        break;
-      }
-    }
-    if (foreignKeyColumnName == null) {
-      throw MdbFormatException('Foreign key column not found');
-    }
+    // Not upstream: the flat table and its foreign key column are cached for
+    // the current top-level read instead of being re-read for every cell.
+    final (foreignKeyColumnName, flatData) =
+        database.readCache.putIfAbsent((
+              #complex,
+              complex.tableDefinitionPage,
+              complex.typeId,
+              column.name,
+            ), () => _readFlatTable(database, column, complex))
+            as (String, List<Map<String, Object?>>);
 
-    final flatData = flatTable.getData();
     final matchingRows = flatData.where(
       (row) => row[foreignKeyColumnName] == foreignKey,
     );
@@ -77,7 +71,10 @@ List<Attachment> readComplex(
         Attachment(
           name: _string(row['FileName'], 'FileName'),
           type: _string(row['FileType'], 'FileType'),
-          data: decodeAttachmentFileData(_bytes(row['FileData'])),
+          data: decodeAttachmentFileData(
+            _bytes(row['FileData']),
+            chargeInflate: database.chargeInflate,
+          ),
           // Upstream only sets truthy values.
           url: switch (row['FileURL']) {
             final String url when url.isNotEmpty => url,
@@ -98,6 +95,30 @@ List<Attachment> readComplex(
   } finally {
     database.complexReadDepth--;
   }
+}
+
+(String, List<Map<String, Object?>>) _readFlatTable(
+  Database database,
+  ColumnDefinition column,
+  ComplexColumnInfo complex,
+) {
+  final (tableName: flatTableName, firstPage: flatTableFirstPage) =
+      resolveFlatTableForComplexColumn(database, column, complex);
+  final flatTable = Table(flatTableName, database, flatTableFirstPage);
+  String? foreignKeyColumnName;
+  for (final c in flatTable.getColumns()) {
+    if (c.type == ColumnType.long &&
+        !c.autoLong &&
+        !_attachmentTypeColumnNames.contains(c.name)) {
+      foreignKeyColumnName = c.name;
+      break;
+    }
+  }
+  if (foreignKeyColumnName == null) {
+    throw MdbFormatException('Foreign key column not found');
+  }
+
+  return (foreignKeyColumnName, flatTable.getData());
 }
 
 String _string(Object? value, String column) {
