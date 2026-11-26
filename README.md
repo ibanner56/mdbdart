@@ -18,11 +18,13 @@ by Andi Pätzold (MIT). See [Attribution](#attribution).
 | Access 2007      | ACE 12 | yes                   |
 | Access 2010      | ACE 14 | yes                   |
 | Access 2013      | ACE 15 | no                    |
-| Access 2016      | ACE 16 | yes                   |
+| Access 2016      | ACE 16 | partly                |
 | Access 2019      | ACE 17 | no                    |
 
-ACE 15 and ACE 17 files are read with the same format rules as ACE 14 and
-ACE 16, as mdb-reader does, but no test file covers them.
+The ACE 16 test files cover an empty database and a big-integer column;
+attachments, long text and currency are tested with ACE 12 files. ACE 15 and
+ACE 17 files are read with the same format rules as ACE 14 and ACE 16, as
+mdb-reader does, but no test file covers them.
 
 **Encryption is not supported yet.** Opening a Jet-encoded or
 Office-encrypted database throws `MdbEncryptedException`. A Jet 4 database
@@ -107,8 +109,21 @@ randomly corrupted copies of the test databases and check that only
   decrypted, so there is no `password` option.
 - Dates are UTC `DateTime`s, big integers are `BigInt`s, and binary values are
   `Uint8List` copies rather than views of the input.
+- `dateTimeExtended` strings take every field in UTC; mdb-reader takes the
+  year in local time.
+- Negative `rowOffset` or `rowLimit` throws `ArgumentError`.
+- Hostile files are bounded where mdb-reader is not: usage-map scanning stops
+  at the end of the file, the memo and OLE values one `getData` call returns
+  may not add up to more than the file size (plus 1 MiB), decompressed
+  attachments are limited to 256 MiB each and per call to the larger of
+  256 MiB and 16 times the file size, and an attachment table that contains
+  attachments throws.
+- Attachment tables are read once per `getData` call instead of once per
+  cell.
 - Malformed files throw typed exceptions in a few places where mdb-reader
-  would return a garbled value.
+  would return a garbled value or fail differently: page-row pointers are read
+  as unsigned, catalog rows without a name are skipped, and short numeric,
+  currency and replication-ID values throw.
 
 ## Development
 

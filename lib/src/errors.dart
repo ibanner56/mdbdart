@@ -1,3 +1,5 @@
+// Original code for mdbdart; not ported from mdb-reader.
+
 /// Exceptions thrown by mdbdart.
 library;
 
