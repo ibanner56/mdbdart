@@ -98,7 +98,7 @@ void main() {
     });
 
     // Not upstream: JavaScript would return an invalid Date.
-    for (final value in [double.nan, double.infinity, 1e300]) {
+    for (final value in [double.nan, double.infinity, 2e8, 1e300]) {
       test('rejects $value', () {
         final buffer = view(bytes(8)..setFloat64(0, value, Endian.little));
         expect(() => readDateTime(buffer), throwsA(isA<MdbFormatException>()));
