@@ -4,6 +4,12 @@ description: >-
   .accdb). A port of the mdb-reader TypeScript library.
 version: 0.1.0
 repository: https://github.com/ibanner56/mdbdart
+issue_tracker: https://github.com/ibanner56/mdbdart/issues
+topics:
+  - access
+  - mdb
+  - database
+  - parser
 
 environment:
   sdk: ^3.12.0
