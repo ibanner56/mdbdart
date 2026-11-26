@@ -1,0 +1,22 @@
+# Publishes to pub.dev when a version tag is pushed, using pub.dev's automated
+# publishing (GitHub OIDC; no stored secrets). Enable it on the package's admin
+# page on pub.dev: repository ibanner56/mdbdart, tag pattern v{{version}}, and
+# require the GitHub environment "pub.dev".
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    permissions:
+      id-token: write
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1.8.2
+    with:
+      environment: pub.dev
+      use-flutter: false
