@@ -1,5 +1,8 @@
 // Ported from mdb-reader (MIT, Copyright (c) 2020 Andi Pätzold), test/complex.spec.ts at 4e08263; see THIRD_PARTY_NOTICES.md
 
+@TestOn('vm')
+library;
+
 import 'dart:convert';
 
 import 'package:mdbdart/mdbdart.dart';

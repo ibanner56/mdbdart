@@ -1,5 +1,8 @@
 // Ported from mdb-reader (MIT, Copyright (c) 2020 Andi Pätzold), test/currency.spec.ts at 4e08263; see THIRD_PARTY_NOTICES.md
 
+@TestOn('vm')
+library;
+
 import 'dart:typed_data';
 
 import 'package:mdbdart/mdbdart.dart';

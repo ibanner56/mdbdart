@@ -6,6 +6,9 @@
 // fixture must either succeed or throw an MdbException; it must never throw
 // any other error, hang, or allocate without bound.
 
+@TestOn('vm')
+library;
+
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';

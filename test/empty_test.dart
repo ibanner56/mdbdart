@@ -1,5 +1,8 @@
 // Ported from mdb-reader (MIT, Copyright (c) 2020 Andi Pätzold), test/empty.spec.ts at 4e08263; see THIRD_PARTY_NOTICES.md
 
+@TestOn('vm')
+library;
+
 import 'package:mdbdart/mdbdart.dart';
 import 'package:test/test.dart';
 
