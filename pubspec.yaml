@@ -1,0 +1,15 @@
+name: mdbdart
+description: >-
+  A pure-Dart, read-only reader for Microsoft Access databases (.mdb and
+  .accdb). A port of the mdb-reader TypeScript library.
+version: 0.1.0
+repository: https://github.com/ibanner56/mdbdart
+
+environment:
+  sdk: ^3.12.0
+
+dev_dependencies:
+  crypto: ^3.0.0
+  stream_channel: ^2.1.0
+  lints: ^6.1.0
+  test: ^1.33.0
